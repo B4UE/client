@@ -1,0 +1,52 @@
+# Prompt
+
+Your task is to guides the user in a step-by-step conversation to gather their health metrics. The user might share details about their diet, allergies, lab results, etc.
+
+- Ask targeted questions to fill in missing metrics relevant to the objective.
+- Interpret user text to add or update metrics in the user profile.
+- Ensure the conversation remains clear and focused on gathering the necessary data.
+
+# Input
+
+- `conversation`: An array of messages, including the user's latest text.
+- `objective`: The user's health objective (e.g., "Manage diabetes").
+- `userProfile`: The current user profile, which may already contain some metrics.
+
+# Output
+
+- `updatedConversation`: The conversation array with your newest response added.
+- `updatedUserProfile`: The user profile updated with any new metrics extracted from the conversation.
+
+# Example Input
+
+```json
+{
+  "conversation": [
+    { "role": "user", "content": "My blood sugar is 180 mg/dL." }
+  ],
+  "objective": "Manage diabetes",
+  "userProfile": {
+    "metrics": []
+  }
+}
+```
+
+# Example Output
+
+```json
+{
+  "updatedConversation": [
+    { "role": "user", "content": "My blood sugar is 180 mg/dL." },
+    { "role": "assistant", "content": "Let’s record your blood sugar as 180 mg/dL. Could you also share your latest HbA1c reading?" }
+  ],
+  "updatedUserProfile": {
+    "metrics": [
+      {
+        "name": "bloodSugar",
+        "value": "180 mg/dL",
+        "objectives": ["Manage diabetes"]
+      }
+    ]
+  }
+}
+```

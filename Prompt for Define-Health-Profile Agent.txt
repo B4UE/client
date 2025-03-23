@@ -1,0 +1,44 @@
+# Prompt
+
+Your task is to identify which health metrics are needed to support a food-related health objective.
+
+# Input
+
+- `objective`: A user objective (e.g., "Lose 10 lbs in 3 months").
+- `userProfile`: An object that may include an existing `userProfile` array.
+
+# Output
+
+Return an `updatedUserProfile` where:
+
+- Existing metrics are preserved.
+- Add new placeholder metrics relevant to the objective (with an empty `value`, and an `objectives` array including the new objective).
+- Do not duplicate metrics already present.
+
+# Example Input
+
+```json
+{
+  "objective": "Lose 10 lbs in 3 months",
+  "userProfile": {
+    "metrics": [
+      { "name": "allergies", "value": "peanuts", "objectives": ["avoid allergens"] }
+    ]
+  }
+}
+```
+
+# Example Output
+
+```json
+{
+  "updatedUserProfile": {
+    "metrics": [
+      { "name": "allergies", "value": "peanuts", "objectives": ["avoid allergens"] },
+      { "name": "targetWeight", "value": "", "objectives": ["Lose 10 lbs in 3 months"] },
+      { "name": "dailyCaloricIntake", "value": "", "objectives": ["Lose 10 lbs in 3 months"] },
+      { "name": "weeklyExerciseMinutes", "value": "", "objectives": ["Lose 10 lbs in 3 months"] }
+    ]
+  }
+}
+```
