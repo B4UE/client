@@ -1,5 +1,4 @@
 # [Health Objective Assistant] PRD
-**File:** prd_03-23-2025_original.mdc
 
 ## Overview
 - **Project Description**  
@@ -25,31 +24,45 @@
 
 - **APIs**  
   1. **POST /api/define-objective**  
-     - **Purpose**: Receives user’s draft objective and relevant health metrics.  
-     - **Request Body**: `{ objective: string, metrics: array or object }`  
-     - **Response**: `{ status: 'success', refinedObjective: string, refinedMetrics: object }`  
-  2. **POST /api/scan-food**  
-     - **Purpose**: Receives an image or image URL for food identification, and user’s current objectives.  
-     - **Request Body**: `{ imageFile: binary or base64, objectives: string }`  
-     - **Response**: `{ status: 'success', isAllowed: boolean, reason: string }`  
-  3. **POST /api/chat**  
-     - **Purpose**: General endpoint for user-LLM interaction (e.g., clarifications, daily usage).  
-     - **Request Body**: `{ userMessage: string, context: object }`  
-     - **Response**: `{ status: 'success', botResponse: string }`
+     - **Purpose**: Takes the current conversation with the user about their objective. The LLM returns an updated conversation with additional questions or clarifications, ultimately leading to a finalized objective after up to 5–6 questions.  
+     - **Request Body**: `{ conversation: Array, ... }`  
+       - `conversation` can include the user's messages and the LLM's responses so far.  
+     - **Response**: `{ status: 'success', updatedConversation: Array, objective: string }`  
+       - `updatedConversation` is the conversation with the LLM's new response appended. Once enough questions are asked and answered, the final `objective` is included.
+
+  2. **POST /api/define-health-profile**  
+     - **Purpose**: Takes a finalized objective and the existing user profile (if any) to produce an updated user profile containing newly relevant metrics.  
+     - **Request Body**: `{ objective: string, userProfile: object }`  
+     - **Response**: `{ status: 'success', updatedUserProfile: object }`  
+       - `updatedUserProfile` merges or adds relevant metrics for the newly defined objective.
+
+  3. **POST /api/collect-health-metrics**  
+     - **Purpose**: Conducts a conversation with the user to gather health metrics. The user may provide text or images (e.g., lab test pictures). The LLM interprets them to populate or update metrics in the user profile.  
+     - **Request Body**: `{ conversation: Array, objective: string, userProfile: object }`  
+     - **Response**: `{ status: 'success', updatedConversation: Array, updatedUserProfile: object }`  
+       - `updatedConversation` includes the latest LLM response.  
+       - `updatedUserProfile` is updated each turn with newly extracted or clarified metrics.
+
+  4. **POST /api/scan-food**  
+     - **Purpose**: Conversational endpoint for evaluating whether a food item (provided via text description or image) meets the user's constraints.  
+     - **Request Body**: `{ conversation: Array, userProfile: object }`  
+     - **Response**: `{ status: 'success', updatedConversation: Array, result: { isAllowed: boolean, reason: string } }`  
+       - The LLM or an image recognition service identifies the food and checks against the user profile or objectives, returning a recommendation with a rationale.
 
 - **Data Models**  
   1. **Objective**  
      - **Description**: A short statement of the user’s goal or constraint (e.g., “Lose 10 lbs in 3 months”).  
   2. **User Metrics**  
-     - **Description**: Various metrics relevant to the objective (e.g., weight, allergies, specific lab values).  
+     - **Description**: Various metrics relevant to one or more objectives (e.g., weight, allergies, specific lab values).  
      - **Source**: Free text input, images/PDFs of lab reports.  
+     - **Objective Associations**: Each metric should store a reference to the objective(s) it covers. If a user deletes an objective, any metrics used **exclusively** by that objective should also be removed from the profile.  
   3. **Scanned Food Item**  
      - **Description**: Analyzed result of the image recognition and LLM classification, saved locally for future reference.  
      - **Fields**:  
        - Name/Label (optional if recognized)  
        - Date/Time of scan  
        - Outcome (“Good” or “Bad”)  
-       - Reason (e.g., “Contains seafood, violates allergy objective”)
+       - Reason (e.g., “Contains seafood, violates allergy objective”)  
 
 - **Security**  
   1. No centralized database or authentication – user data is stored locally in the browser.  
@@ -126,3 +139,4 @@
   - [ ] **Task**: Conduct end-to-end testing on objective definition and food scanning  
   - [ ] **Task**: Iterate on UI/UX improvements based on test feedback  
   - [ ] **Task**: Finalize and release MVP
+
