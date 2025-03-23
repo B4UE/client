@@ -23,31 +23,224 @@
   4. **LLM Integration**: A dedicated endpoint in the Flask backend to communicate with an LLM API. The LLM should present pre-written or “canned” answers whenever relevant to speed up the conversation, while still allowing for custom responses when necessary.
 
 - **APIs**  
-  1. **POST /api/define-objective**  
-     - **Purpose**: Takes the current conversation with the user about their objective. The LLM returns an updated conversation with additional questions or clarifications, ultimately leading to a finalized objective after up to 5–6 questions.  
-     - **Request Body**: `{ conversation: Array, ... }`  
-       - `conversation` can include the user's messages and the LLM's responses so far.  
-     - **Response**: `{ status: 'success', updatedConversation: Array, objective: string }`  
-       - `updatedConversation` is the conversation with the LLM's new response appended. Once enough questions are asked and answered, the final `objective` is included.
+  1. **POST /api/orchestrate**
+     - **Purpose**: A single orchestration endpoint that receives all messages (define objective, define health profile, collect health metrics, or scan food), categorizes the request, and routes it to the correct internal agent. The orchestrator then forwards the agent’s response back to the client.
 
-  2. **POST /api/define-health-profile**  
-     - **Purpose**: Takes a finalized objective and the existing user profile (if any) to produce an updated user profile containing newly relevant metrics.  
-     - **Request Body**: `{ objective: string, userProfile: object }`  
-     - **Response**: `{ status: 'success', updatedUserProfile: object }`  
-       - `updatedUserProfile` merges or adds relevant metrics for the newly defined objective.
+     - **Input**:
+       - `conversation`: Array of message objects representing the ongoing dialogue between the user and the system.
+         - Each message includes at least a `role` (e.g., `user`, `assistant`) and `content` (the text of the message).
+       - `userProfile`: The current user profile, if any.
+       - `objective`: The user’s objective (if relevant).
+       - Optionally, additional fields (e.g., attachments for images) depending on the request.
+       - Optionally, additional fields (e.g., attachments for images) depending on the request.
 
-  3. **POST /api/collect-health-metrics**  
-     - **Purpose**: Conducts a conversation with the user to gather health metrics. The user may provide text or images (e.g., lab test pictures). The LLM interprets them to populate or update metrics in the user profile.  
-     - **Request Body**: `{ conversation: Array, objective: string, userProfile: object }`  
-     - **Response**: `{ status: 'success', updatedConversation: Array, updatedUserProfile: object }`  
-       - `updatedConversation` includes the latest LLM response.  
-       - `updatedUserProfile` is updated each turn with newly extracted or clarified metrics.
+     - **Output**:
+       - The response will vary depending on which internal agent is invoked. It can include:
+         - `updatedConversation`: Updated array of messages (if the agent involves a back-and-forth chat).
+         - `objective`: The finalized or partial objective (if this is a define-objective flow).
+         - `updatedUserProfile`: If the agent modifies or adds metrics to the user profile.
+         - `result`: If the request involved scanning food to see if it’s allowed.
 
-  4. **POST /api/scan-food**  
-     - **Purpose**: Conversational endpoint for evaluating whether a food item (provided via text description or image) meets the user's constraints.  
-     - **Request Body**: `{ conversation: Array, userProfile: object }`  
-     - **Response**: `{ status: 'success', updatedConversation: Array, result: { isAllowed: boolean, reason: string } }`  
-       - The LLM or an image recognition service identifies the food and checks against the user profile or objectives, returning a recommendation with a rationale.
+     - **Behavior**:
+       - Receives the request.
+       - Infers the category of the request from the conversation/context.
+       - Routes the request data (conversation, userProfile, etc.) to the correct internal agent.
+       - Receives the result from the agent.
+       - Returns a consolidated response that includes the agent’s output.
+
+     - **Example Data Structures**:
+       **Input**:
+       ```json
+       {
+         "conversation": [
+           { "role": "user", "content": "I’d like to set a weight-loss goal." }
+         ],
+         "userProfile": {},
+         "agentType": "defineObjective"
+       }
+       ```
+       **Output**:
+       ```json
+       {
+         "updatedConversation": [
+           { "role": "user", "content": "I’d like to set a weight-loss goal." },
+           { "role": "assistant", "content": "Great! How much weight would you like to lose?" }
+         ],
+         "objective": "",
+         "updatedUserProfile": {},
+         "result": null
+       }
+       ```     2. **Define-Objective Agent**
+   - **Purpose**: Guide the user through a conversational process to create and finalize a **new** health objective (e.g., lose weight, avoid certain allergens, manage blood sugar). The agent asks probing questions until the objective is clear and actionable.
+   - **Input**:
+     - `conversation`: Array of message objects representing the current conversation (user messages, LLM responses, etc.).
+   - **Output**:
+     - `updatedConversation`: Updated array of messages including the LLM’s newest reply.
+     - `objective`: The finalized objective once all clarifications are gathered (up to 5–6 questions).
+   - **Example Data Structures**:
+     **Input**:
+     ```json
+     {
+       "conversation": [
+         { "role": "user", "content": "I want to lose weight." },
+         { "role": "assistant", "content": "Can you describe your current diet?" }
+       ],
+       "objective": ""
+     }
+     ```
+     **Output**:
+     ```json
+     {
+       "updatedConversation": [
+         { "role": "user", "content": "I want to lose weight." },
+         { "role": "assistant", "content": "Can you describe your current diet?" },
+         { "role": "assistant", "content": "(New LLM response)" }
+       ],
+       "objective": "Lose 10 lbs in 3 months"
+     }
+     ```
+
+3. **Define-Health-Profile Agent**
+   - **Purpose**: Determine which health metrics will be needed later to support the newly defined objective. This agent does not fill in values yet—only outlines the metrics or placeholders that should be collected in the subsequent **Collect-Health-Metrics** step.
+   - **Input**:
+     - `objective`: The user’s finalized objective.
+     - `userProfile`: The current user profile object (may be empty if new).
+   - **Output**:
+     - `updatedUserProfile`: Contains newly added metrics (with empty or placeholder values) that are relevant to the objective but not yet filled in.
+   - **Behavior**: Merges or updates the user profile with any placeholder metrics needed for the new objective. If an existing metric already covers the new objective, it’s not duplicated.
+   - **Example Data Structures**:
+     **Input**:
+     ```json
+     {
+       "objective": "Lose 10 lbs in 3 months",
+       "userProfile": {
+         "metrics": [
+           {
+             "name": "allergies",
+             "value": "peanuts",
+             "objectives": ["avoid allergens"]
+           }
+         ]
+       }
+     }
+     ```
+     **Output**:
+     ```json
+     {
+       "updatedUserProfile": {
+         "metrics": [
+           {
+             "name": "allergies",
+             "value": "peanuts",
+             "objectives": ["avoid allergens"]
+           },
+           {
+             "name": "targetWeight",
+             "value": "",
+             "objectives": ["Lose 10 lbs in 3 months"]
+           },
+           {
+             "name": "dailyCaloricIntake",
+             "value": "",
+             "objectives": ["Lose 10 lbs in 3 months"]
+           },
+           {
+             "name": "weeklyExerciseMinutes",
+             "value": "",
+             "objectives": ["Lose 10 lbs in 3 months"]
+           }
+         ]
+       }
+     }
+     ```
+
+4. **Collect-Health-Metrics Agent**
+   - **Purpose**: Engage the user in a step-by-step conversation to gather additional health-related data (metrics) from **text input only**. The user can provide textual information about their diet, known allergies, lab results (in text form), etc.
+   - **Input**:
+     - `conversation`: The ongoing conversation, including the user’s latest text message.
+     - `objective`: The user’s objective.
+     - `userProfile`: The current user profile.
+   - **Output**:
+     - `updatedConversation`: The conversation with the LLM’s newest response.
+     - `updatedUserProfile`: Updated with any new metrics gleaned from the conversation.
+   - **Behavior**: Asks targeted questions to fill in any missing metrics relevant to the objective, interpreting user text to populate or update the user profile.
+   - **Example Data Structures**:
+     **Input**:
+     ```json
+     {
+       "conversation": [
+         { "role": "user", "content": "My blood sugar is 180 mg/dL." }
+       ],
+       "objective": "Manage diabetes",
+       "userProfile": {
+         "metrics": []
+       }
+     }
+     ```
+     **Output**:
+     ```json
+     {
+       "updatedConversation": [
+         { "role": "user", "content": "My blood sugar is 180 mg/dL." },
+         { "role": "assistant", "content": "Let’s record your blood sugar as 180 mg/dL." }
+       ],
+       "updatedUserProfile": {
+         "metrics": [
+           {
+             "name": "bloodSugar",
+             "value": "180 mg/dL",
+             "objectives": ["Manage diabetes"]
+           }
+         ]
+       }
+     }
+     ```
+
+5. **Scan-Food Agent**
+   - **Purpose**: Determine whether a specific food item (provided via text or image) aligns with the user’s objectives and metrics. The agent identifies the food content and decides if it’s allowed or not, providing explanations.
+   - **Input**:
+     - `conversation`: The ongoing conversation, possibly including a text description or image of the food.
+     - `userProfile`: The current user profile.
+   - **Output**:
+     - `updatedConversation`: The conversation with the LLM’s or image recognition result appended.
+     - `result`: An object containing `{ isAllowed: boolean, reason: string }`.
+   - **Behavior**: Identifies the food item and evaluates it against the user’s objectives and metrics to determine whether it is suitable.
+   - **Example Data Structures**:
+     **Input**:
+     ```json
+     {
+       "conversation": [
+         { "role": "user", "content": "Can I eat this pizza?" }
+       ],
+       "userProfile": {
+         "metrics": [
+           {
+             "name": "allergies",
+             "value": "gluten",
+             "objectives": ["Avoid gluten"]
+           }
+         ]
+       }
+     }
+     ```
+     **Output**:
+     ```json
+     {
+       "updatedConversation": [
+         { "role": "user", "content": "Can I eat this pizza?" },
+         { "role": "assistant", "content": "This pizza contains gluten." }
+       ],
+       "result": {
+         "isAllowed": false,
+         "reason": "It contains gluten, which you are allergic to."
+       }
+     }
+     ```
+  2. **POST /api/image-scan**
+  2. **POST /api/image-scan**  
+     - **Purpose**: An endpoint for uploading an image (e.g., a food item or lab test image) and returning a detailed description of its contents. This endpoint uses an image recognition service or LLM-based computer vision to interpret the image. It then decides which internal agent to call (if relevant) or simply returns the recognized details.  
+     - **Request Body**: `{ imageFile: binary or base64, ... }` plus any additional information required to handle the request.  
+     - **Response**: `{ status: 'success', description: string, ... }`, which can include recognized text or details gleaned from the image. If the user’s request requires further logic (e.g., scanning food for dietary restrictions), the endpoint may coordinate with the orchestration agent and respond accordingly.
 
 - **Data Models**  
   1. **Objective**  
