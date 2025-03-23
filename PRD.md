@@ -32,7 +32,6 @@
        - `userProfile`: The current user profile, if any.
        - `objective`: The user’s objective (if relevant).
        - Optionally, additional fields (e.g., attachments for images) depending on the request.
-       - Optionally, additional fields (e.g., attachments for images) depending on the request.
 
      - **Output**:
        - The response will vary depending on which internal agent is invoked. It can include:
@@ -70,7 +69,9 @@
          "updatedUserProfile": {},
          "result": null
        }
-       ```     2. **Define-Objective Agent**
+       ```     
+  
+  2. **Define-Objective Agent**
    - **Purpose**: Guide the user through a conversational process to create and finalize a **new** health objective (e.g., lose weight, avoid certain allergens, manage blood sugar). The agent asks probing questions until the objective is clear and actionable.
    - **Input**:
      - `conversation`: Array of message objects representing the current conversation (user messages, LLM responses, etc.).
@@ -100,7 +101,7 @@
      }
      ```
 
-3. **Define-Health-Profile Agent**
+  3. **Define-Health-Profile Agent**
    - **Purpose**: Determine which health metrics will be needed later to support the newly defined objective. This agent does not fill in values yet—only outlines the metrics or placeholders that should be collected in the subsequent **Collect-Health-Metrics** step.
    - **Input**:
      - `objective`: The user’s finalized objective.
@@ -154,7 +155,7 @@
      }
      ```
 
-4. **Collect-Health-Metrics Agent**
+  4. **Collect-Health-Metrics Agent**
    - **Purpose**: Engage the user in a step-by-step conversation to gather additional health-related data (metrics) from **text input only**. The user can provide textual information about their diet, known allergies, lab results (in text form), etc.
    - **Input**:
      - `conversation`: The ongoing conversation, including the user’s latest text message.
@@ -196,7 +197,7 @@
      }
      ```
 
-5. **Scan-Food Agent**
+  5. **Scan-Food Agent**
    - **Purpose**: Determine whether a specific food item (provided via text or image) aligns with the user’s objectives and metrics. The agent identifies the food content and decides if it’s allowed or not, providing explanations.
    - **Input**:
      - `conversation`: The ongoing conversation, possibly including a text description or image of the food.
@@ -237,7 +238,6 @@
      }
      ```
   2. **POST /api/image-scan**
-  2. **POST /api/image-scan**  
      - **Purpose**: An endpoint for uploading an image (e.g., a food item or lab test image) and returning a detailed description of its contents. This endpoint uses an image recognition service or LLM-based computer vision to interpret the image. It then decides which internal agent to call (if relevant) or simply returns the recognized details.  
      - **Request Body**: `{ imageFile: binary or base64, ... }` plus any additional information required to handle the request.  
      - **Response**: `{ status: 'success', description: string, ... }`, which can include recognized text or details gleaned from the image. If the user’s request requires further logic (e.g., scanning food for dietary restrictions), the endpoint may coordinate with the orchestration agent and respond accordingly.
