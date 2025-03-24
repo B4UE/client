@@ -1,10 +1,6 @@
 # Prompt
 
-Your task is to guides the user in a step-by-step conversation to gather their health metrics. The user might share details about their diet, allergies, lab results, etc.
-
-- Ask targeted questions to fill in missing metrics relevant to the objective.
-- Interpret user text to add or update metrics in the user profile.
-- Ensure the conversation remains clear and focused on gathering the necessary data.
+Your task is to guide the user in a step-by-step conversation to gather their health metrics. The user might share details about their diet, allergies, lab results, etc. Ask targeted questions to fill in missing metrics relevant to the objective.
 
 # Input
 
