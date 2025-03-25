@@ -157,7 +157,9 @@ export async function scanFood(data: ScanFoodRequest, useLiveApi = false): Promi
   }
 
   return response.json()
-}// Update the sendChatMessage function to use the live API when needed
+}
+
+// Update the sendChatMessage function to use the live API when needed
 export async function sendChatMessage(data: ChatRequest, useLiveApi = false): Promise<ChatResponse> {
   if (useLiveApi) {
     const response = await fetch(`${API_LIVE_URL}/api/orchestrate`, {

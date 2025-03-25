@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useObjectives } from "../../contexts/objectives-context"
+import { useObjectives } from "@/contexts/objectives-context"
 
 export default function ObjectivesList() {
   const { objectives, deleteObjective } = useObjectives()
