@@ -32,7 +32,7 @@ export interface ChatResponse {
 
 // Update the API_LIVE_URL to point to localhost:5000
 const API_BASE_URL = "/api"
-const API_LIVE_URL = "https://localhost:5000/"
+const API_LIVE_URL = "http://localhost:5002"
 
 // Update the defineObjective function to use the live API when needed
 export async function defineObjective(
@@ -40,7 +40,7 @@ export async function defineObjective(
   useLiveApi = false,
 ): Promise<DefineObjectiveResponse> {
   if (useLiveApi) {
-    const response = await fetch(`${API_LIVE_URL}/orchestrate`, {
+    const response = await fetch(`${API_LIVE_URL}/api/orchestrate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -67,7 +67,7 @@ export async function defineObjective(
   }
 
   // Original mock implementation
-  const response = await fetch(`${API_BASE_URL}/define-objective`, {
+  const response = await fetch(`${API_BASE_URL}/api/define-objective`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -85,17 +85,49 @@ export async function defineObjective(
 // Update the scanFood function to use the live API when needed
 export async function scanFood(data: ScanFoodRequest, useLiveApi = false): Promise<ScanFoodResponse> {
   if (useLiveApi) {
-    const response = await fetch(`${API_LIVE_URL}/orchestrate`, {
+    // Convert base64 string to binary data
+    const imageData = atob(data.imageFile.split(',')[1])
+    const arrayBuffer = new ArrayBuffer(imageData.length)
+    const uint8Array = new Uint8Array(arrayBuffer)
+    
+    for (let i = 0; i < imageData.length; i++) {
+      uint8Array[i] = imageData.charCodeAt(i)
+    }
+    
+    const blob = new Blob([uint8Array], { type: 'image/jpeg' })
+    
+    // Create FormData and append the image
+    const formData = new FormData()
+    formData.append('image', blob)
+    
+    // First, send the image to the image-scan endpoint using FormData
+    const imageResponse = await fetch(`${API_LIVE_URL}/api/image-scan`, {
+      method: "POST",
+      body: formData,
+    })
+
+    if (!imageResponse.ok) {
+      throw new Error("Failed to scan image")
+    }
+
+    const imageResult = await imageResponse.json()
+    const imageAnalysis = imageResult.analysis || "Unknown food item"
+    
+    // Then, use the orchestrate endpoint with the image description to determine if food is allowed
+    const response = await fetch(`${API_LIVE_URL}/api/orchestrate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        conversation: [{ role: "user", content: "I want to check if I can eat this food item." }],
+        conversation: [{ 
+          role: "user", 
+          content: `I want to check if I can eat this food item: ${imageAnalysis}` 
+        }],
         userProfile: {},
         agentType: "scanFood",
-        imageFile: data.imageFile,
         objectives: data.objectives,
+        imageDescription: imageAnalysis
       }),
     })
 
@@ -112,7 +144,7 @@ export async function scanFood(data: ScanFoodRequest, useLiveApi = false): Promi
   }
 
   // Original mock implementation
-  const response = await fetch(`${API_BASE_URL}/scan-food`, {
+  const response = await fetch(`${API_BASE_URL}/api/scan-food`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -125,12 +157,10 @@ export async function scanFood(data: ScanFoodRequest, useLiveApi = false): Promi
   }
 
   return response.json()
-}
-
-// Update the sendChatMessage function to use the live API when needed
+}// Update the sendChatMessage function to use the live API when needed
 export async function sendChatMessage(data: ChatRequest, useLiveApi = false): Promise<ChatResponse> {
   if (useLiveApi) {
-    const response = await fetch(`${API_LIVE_URL}/orchestrate`, {
+    const response = await fetch(`${API_LIVE_URL}/api/orchestrate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
