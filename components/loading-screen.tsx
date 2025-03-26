@@ -120,7 +120,7 @@ interface FallingEmojiProps {
   emoji: string
   delay: number
   duration: number
-  x: number
+  x: string
 }
 
 const FallingEmoji = ({ emoji, delay, duration, x }: FallingEmojiProps) => {

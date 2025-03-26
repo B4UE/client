@@ -70,9 +70,9 @@ export default function ScannedItemsHistory({ showHeader = true }: ScannedItemsH
       <AnimatePresence>
         {(isExpanded || !showHeader) && (
           <motion.div
-            initial={showHeader ? { height: 0, opacity: 0 } : false}
-            animate={showHeader ? { height: "auto", opacity: 1 } : false}
-            exit={showHeader ? { height: 0, opacity: 0 } : false}
+            initial={showHeader ? { height: 0, opacity: 0 } : undefined}
+            animate={showHeader ? { height: "auto", opacity: 1 } : undefined}
+            exit={showHeader ? { height: 0, opacity: 0 } : undefined}
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
